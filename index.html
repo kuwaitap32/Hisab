@@ -4,7 +4,9 @@
 <title>সংগঠনের হিসাব</title>
 <style>
 :root{--bg:#0b0e1a;--card:#141a2e;--tx:#eef0fa;--mu:#98a0b8;--bd:#252c47;--p1:#6d3df0;--p2:#3b5bdb;--rd:#fb7185;--gr:#34d399;color-scheme:dark}
-@media (prefers-color-scheme:light){:root{--bg:#f3f4fb;--card:#fff;--tx:#161a2b;--mu:#6b7280;--bd:#e3e5f0;--rd:#e11d48;--gr:#059669;color-scheme:light}}
+@media (prefers-color-scheme:light){:root:not([data-theme]){--bg:#f3f4fb;--card:#fff;--tx:#161a2b;--mu:#6b7280;--bd:#e3e5f0;--rd:#e11d48;--gr:#059669;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f3f4fb;--card:#fff;--tx:#161a2b;--mu:#6b7280;--bd:#e3e5f0;--rd:#e11d48;--gr:#059669;color-scheme:light}
+:root[data-theme="dark"]{--bg:#0b0e1a;--card:#141a2e;--tx:#eef0fa;--mu:#98a0b8;--bd:#252c47;--rd:#fb7185;--gr:#34d399;color-scheme:dark}
 *{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Noto Sans Bengali",sans-serif}
 main{max-width:640px;margin:auto;padding:14px 14px 100px}
 .hero{background:linear-gradient(135deg,var(--p2),var(--p1));color:#fff;border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(109,61,240,.35)}
@@ -55,9 +57,9 @@ const $=i=>document.getElementById(i),e=s=>{const d=document.createElement('div'
 bn=n=>'৳'+Number(n||0).toLocaleString('bn-BD'),rid=()=>Math.random().toString(36).slice(2,9),sum=a=>a.reduce((t,x)=>t+Number(x.amount||0),0),
 ic=(s,a,b)=>`<div class="ic" style="background:linear-gradient(135deg,${a},${b})">${s}</div>`,
 mn=i=>(S.members.find(x=>x.id==i)||{name:'?'}).name,nm=()=>prof?prof.name:'অ্যাডমিন',v=i=>$(i)&&$(i).value;
-const seen=()=>{try{return +localStorage.getItem('ntseen')||0}catch(x){return 0}},unread=()=>NT.filter(n=>n.t>seen()).length,saveFin=m=>{if(m)S.log=[{t:Date.now(),by:nm(),m},...S.log].slice(0,150);setDoc(doc(db,'app','fin'),S).catch(()=>alert('সেভ হয়নি'));render()};
+const th=()=>{try{return localStorage.getItem('theme')||'auto'}catch(x){return 'auto'}},applyTh=()=>{const t=th();if(t=='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t},seen=()=>{try{return +localStorage.getItem('ntseen')||0}catch(x){return 0}},unread=()=>NT.filter(n=>n.t>seen()).length,saveFin=m=>{if(m)S.log=[{t:Date.now(),by:nm(),m},...S.log].slice(0,150);setDoc(doc(db,'app','fin'),S).catch(()=>alert('সেভ হয়নি'));render()};
 
-onSnapshot(doc(db,'app','brand'),s=>{if(s.exists())B=s.data();if(!ok)gate();else render()},()=>{});
+applyTh();onSnapshot(doc(db,'app','brand'),s=>{if(s.exists())B=s.data();if(!ok)gate();else render()},()=>{});
 onAuthStateChanged(auth,u=>{unsubs.forEach(f=>f());unsubs=[];user=u;prof=null;ok=false;admin=false;
  if(!u){showGate();return}
  admin=ADMINS.map(x=>x.toLowerCase()).includes((u.email||'').toLowerCase());
@@ -86,6 +88,7 @@ function menu(){const mine=S.members.find(m=>m.uid==(user&&user.uid)),
  sec=t=>`<div class="mu" style="margin:16px 4px 0">${t}</div>`,ph=prof&&prof.phone?prof.phone.slice(0,3)+'•••••'+prof.phone.slice(-3):'';
  let h=`<div class="l" style="margin-bottom:12px"><div class="ic" style="width:54px;height:54px;background:linear-gradient(135deg,#6d3df0,#3b5bdb)">${B.logo?`<img src="${e(B.logo)}" alt="">`:'💰'}</div><div><b style="font-size:18px">${e(B.name)}</b><div class="mu">${e(B.tag)}</div></div></div>
  <div class="hero"><b style="font-size:18px">${e(nm())}</b><div class="mu">${e(ph)}</div><span class="pill" style="background:#10b981">${admin?'অ্যাডমিন':'সক্রিয় সদস্য'}</span></div>`;
+ h+=sec('থিম')+`<div class="card"><div class="l">${ic('🎨','#a855f7','#6d28d9')}<b>থিম বাছুন</b></div><div class="sw" style="margin-top:10px">${[['dark','🌙 ডার্ক'],['light','☀️ লাইট'],['auto','🖥️ অটো']].map(x=>`<button data-th="${x[0]}" class="${th()==x[0]?'on':''}">${x[1]}</button>`).join('')}</div></div>`;
  h+=sec('মূল')+`<div class="card">${it('🏠','#8b5cf6','#6d3df0','হোম','tab:home')}${it('👥','#38bdf8','#2563eb','সদস্য তালিকা','tab:mem')}${it('🙂','#f472b6','#db2777','আমার প্রোফাইল',mine?'me:'+mine.id:'tab:mem')}</div>`;
  h+=sec('জমা ও খরচ')+`<div class="card">${it('📥','#10b981','#059669','মাসিক জমা','tab:mon:d')}${it('📤','#fb7185','#e11d48','খরচ','tab:mon:x')}${it('⏰','#f59e0b','#ea580c','বকেয়া তালিকা','tab:home')}${it('📊','#06b6d4','#0284c7','রিপোর্ট ডাউনলোড','pg:rep')}</div>`;
  h+=sec('সংগঠন')+`<div class="card">${it('🔔','#f59e0b','#ea580c','নোটিফিকেশন'+(unread()?` <span class="pill">${unread()} নতুন</span>`:''),'pg:not')}${it('💬','#22c55e','#15803d','গ্রুপ চ্যাট','tab:chat')}${it('📜','#f59e0b','#d97706','সংগঠনের নীতিমালা','pg:pol')}${it('🧾','#ec4899','#be185d','পরিবর্তনের লগ','pg:log')}</div>`;
@@ -142,6 +145,7 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  }catch(x){return fail(x)}
  if(t.id=='out'||(g&&g.dataset.go=='out')){signOut(auth);tab='home';pg=null;return}
  if(!ok)return;
+ if(d.th){try{localStorage.setItem('theme',d.th)}catch(x){}applyTh();return render()}
  if(tb){tab=tb.dataset.t;sel=null;pg=null;return render()}
  if(g){const a=g.dataset.go.split(':');pg=null;sel=null;if(a[0]=='tab'){tab=a[1];if(a[2])sub=a[2]}else if(a[0]=='pg'){tab='more';pg=a[1]}else if(a[0]=='me'){tab='mem';sel=a[1]}return render()}
  if(t.id=='mback'){pg=null;return render()}
