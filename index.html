@@ -51,7 +51,7 @@ const firebaseConfig = {
 const ADMINS = ["hafezalauddin39@gmail.com","hafezalauddin99@gmail.com","kuwaitap32@gmail.com"];
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],
+let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],SIGS={},SIGA='',
  user=null,prof=null,admin=false,ok=false,tab='home',sub='d',sel=null,pg=null,mode='in',err='',unsubs=[],mon=new Date().toISOString().slice(0,7);
 const $=i=>document.getElementById(i),e=s=>{const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML},
 bn=n=>'৳'+Number(n||0).toLocaleString('bn-BD'),rid=()=>Math.random().toString(36).slice(2,9),sum=a=>a.reduce((t,x)=>t+Number(x.amount||0),0),
@@ -67,6 +67,8 @@ onAuthStateChanged(auth,u=>{unsubs.forEach(f=>f());unsubs=[];user=u;prof=null;ok
 function boot(){const r=s=>s.data();
  unsubs.push(onSnapshot(doc(db,'app','fin'),s=>{if(s.exists()){const d=r(s);S={members:d.members||[],deposits:d.deposits||[],expenses:d.expenses||[],log:d.log||[]}}render()}),
  onSnapshot(doc(db,'app','policy'),s=>{POL=s.exists()?r(s).text||'':'';if(!(tab=='more'&&pg=='pol'&&admin))render()}),
+ onSnapshot(doc(db,'app','sig_auth'),s=>{SIGA=s.exists()?s.data().img||'':''},()=>{}),
+ admin?onSnapshot(collection(db,'sigs'),s=>{SIGS={};s.docs.forEach(x=>SIGS[x.id]=x.data().img||'');render()},()=>{}):onSnapshot(doc(db,'sigs',user.uid),s=>{SIGS={};if(s.exists())SIGS[user.uid]=s.data().img||''},()=>{}),
  onSnapshot(doc(db,'app','notices'),s=>{NT=s.exists()?(s.data().list||[]):[];render()}),
  onSnapshot(query(collection(db,'chat'),orderBy('ts','desc'),limit(80)),s=>{CH=s.docs.map(r);if(tab=='chat'&&document.activeElement.id!='ct')render()}));
  if(admin)unsubs.push(onSnapshot(collection(db,'users'),s=>{USERS=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
@@ -101,9 +103,7 @@ function invHTML(o){const td='padding:10px 12px;border:1px solid #cfd6e6;',th=td
    <tr><td style="${td}">${e(o.month)}</td><td style="${td}">${e(o.invno)}</td><td style="${td}">${e(o.method||'—')}</td><td style="${td};text-align:right">${bn(o.amount)}</td></tr>
    <tr><td style="${td}" colspan="3"><b style="float:right">মোট</b></td><td style="${td};text-align:right;font-weight:800">${bn(o.amount)}</td></tr></table>
   <div style="margin-top:22px;padding:12px 16px;background:#f1f5f9;border-radius:10px;font-size:15px">এ পর্যন্ত আপনার মোট জমা: <b>${bn(o.total)}</b></div>
-  <div style="display:flex;justify-content:space-between;margin-top:150px;font-size:15px">
-   <div style="border-top:1.5px solid #333;padding-top:6px;width:230px;text-align:center">সদস্যের স্বাক্ষর</div>
-   <div style="border-top:1.5px solid #333;padding-top:6px;width:230px;text-align:center">কর্তৃপক্ষের স্বাক্ষর</div></div></div>
+  <div style="display:flex;justify-content:space-between;margin-top:70px;font-size:15px"><div style="width:230px;text-align:center"><div style="height:80px;display:flex;align-items:flex-end;justify-content:center">${o.sigM?`<img src="${e(o.sigM)}" style="max-height:78px;max-width:220px">`:''}</div><div style="border-top:1.5px solid #333;padding-top:6px">সদস্যের স্বাক্ষর</div></div><div style="width:230px;text-align:center"><div style="height:80px;display:flex;align-items:flex-end;justify-content:center">${o.sigA?`<img src="${e(o.sigA)}" style="max-height:78px;max-width:220px">`:''}</div><div style="border-top:1.5px solid #333;padding-top:6px">কর্তৃপক্ষের স্বাক্ষর</div></div></div></div>
  <div style="padding:14px 36px;background:#f1f5f9;color:#64748b;font-size:13px;text-align:center">এটি ${e(o.org)}-এর হিসাব অ্যাপ থেকে তৈরি কম্পিউটার-জেনারেটেড ইনভয়েস</div></div>`}
 async function dlInvoice(did,btn){
  const d=S.deposits.find(x=>x.id==did);if(!d)return;const mi=S.members.findIndex(x=>x.id==d.mid),m=S.members[mi];if(!m||!canInv(d))return;
@@ -113,7 +113,7 @@ async function dlInvoice(did,btn){
   await loadJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   const u=(m.uid&&user&&m.uid==user.uid)?prof:USERS.find(x=>x.id==m.uid),no=String(mi+1).padStart(3,'0'),invno='INV-'+d.month.replace('-','')+'-'+no;
   const box=document.createElement('div');box.style.cssText='position:fixed;left:-10000px;top:0;width:794px;background:#fff;color:#111;font-family:"Noto Sans Bengali",system-ui,sans-serif';
-  box.innerHTML=invHTML({logo:B.logo,org:B.name,tag:B.tag,invno,no,name:m.name,phone:u&&u.phone,month:d.month,method:d.method,amount:d.amount,total:sum(S.deposits.filter(x=>x.mid==m.id)),date:new Date().toLocaleDateString('bn-BD',{year:'numeric',month:'long',day:'numeric'})});
+  box.innerHTML=invHTML({logo:B.logo,org:B.name,tag:B.tag,invno,no,name:m.name,phone:u&&u.phone,month:d.month,method:d.method,amount:d.amount,sigM:SIGS[m.uid||m.id],sigA:SIGA,total:sum(S.deposits.filter(x=>x.mid==m.id)),date:new Date().toLocaleDateString('bn-BD',{year:'numeric',month:'long',day:'numeric'})});
   document.body.appendChild(box);
   const cv=await html2canvas(box,{scale:2,backgroundColor:'#ffffff'});document.body.removeChild(box);
   const pdf=new window.jspdf.jsPDF('p','pt','a4');pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());
@@ -137,7 +137,7 @@ function page(){const b='<button id="mback">← মেনু</button>';
  if(pg=='pol')return b+`<div class="card"><div class="l">${ic('📜','#f59e0b','#d97706')}<b>সংগঠনের নীতিমালা</b></div>`+(admin?`<textarea id="pt">${e(POL)}</textarea><div class="f"><button class="p" id="ps">সেভ করুন</button></div>`:`<pre>${e(POL)||'এখনো নীতিমালা দেওয়া হয়নি'}</pre>`)+'</div>';
  if(pg=='rep')return b+`<div class="card"><div class="l">${ic('📊','#06b6d4','#0284c7')}<b>রিপোর্ট</b></div><p>জমা ${bn(sum(S.deposits))} · খরচ ${bn(sum(S.expenses))}</p><button class="p" id="csv">CSV ডাউনলোড</button></div>`;
  if(pg=='log')return b+`<div class="card"><div class="l">${ic('🧾','#ec4899','#be185d')}<b>পরিবর্তনের লগ</b></div>`+(S.log.slice(0,50).map(x=>`<div class="row"><span>${e(x.m)}<br><span class="mu">${e(x.by)} · ${new Date(x.t).toLocaleString('bn-BD')}</span></span></div>`).join('')||'<p class="mu">কোনো লগ নেই</p>')+'</div>';
- if(pg=='set'&&admin)return b+`<div class="card"><div class="l">${ic('⚙️','#64748b','#334155')}<b>নাম, লঘু ও লোগো</b></div><div class="f"><input id="bn" value="${e(B.name)}" placeholder="নাম"><input id="bt" value="${e(B.tag)}" placeholder="লঘু/ট্যাগলাইন"><button id="bl2">🖼️ লোগো বাছুন</button><input id="bl" type="file" accept="image/*" hidden><button class="p" id="bs">সেভ</button></div></div>`;
+ if(pg=='set'&&admin)return b+`<div class="card"><div class="l">${ic('⚙️','#64748b','#334155')}<b>নাম, লঘু ও লোগো</b></div><div class="f"><input id="bn" value="${e(B.name)}" placeholder="নাম"><input id="bt" value="${e(B.tag)}" placeholder="লঘু/ট্যাগলাইন"><button id="bl2">🖼️ লোগো বাছুন</button><input id="bl" type="file" accept="image/*" hidden><button class="p" id="bs">সেভ</button></div></div><div class="card"><div class="l">${ic('✍️','#0ea5e9','#0369a1')}<b>কর্তৃপক্ষের স্বাক্ষর (ইনভয়েসে বসবে)</b></div>${SIGA?`<img src="${e(SIGA)}" style="max-width:240px;background:#fff;border-radius:8px;margin-top:8px">`:'<p class="mu">এখনো দেওয়া হয়নি</p>'}<div class="f"><button id="sga2">✍️ স্বাক্ষরের ছবি বাছুন</button><input id="sga" type="file" accept="image/*" hidden>${SIGA?'<button class="x" id="sgax">মুছুন</button>':''}</div></div>`;
  return menu()}
 function render(){if(!ok)return;let h='';
  if(tab=='home'){const tin=sum(S.deposits),tout=sum(S.expenses),mine=S.members.find(m=>m.uid==user.uid),due=S.members.filter(m=>!S.deposits.some(d=>d.mid==m.id&&d.month==mon));
@@ -149,11 +149,11 @@ function render(){if(!ok)return;let h='';
   ${NT[0]?`<div class="card" data-go="pg:not" style="cursor:pointer"><div class="l">${ic('🔔','#f59e0b','#ea580c')}<div><b>${e(NT[0].title)}</b><div class="mu">${e(NT[0].text.slice(0,80))}${NT[0].text.length>80?'…':''}</div></div></div></div>`:''}<div class="card"><div class="row"><b>⏰ বকেয়া</b><input type="month" id="mon" value="${mon}"></div>${due.length?due.map(m=>`<div class="row"><span>${e(m.name)}</span><span class="pill">বাকি</span></div>`).join(''):'<p class="mu">এই মাসে কারও বকেয়া নেই 🎉</p>'}</div>`}
  if(tab=='mem'){
   if(sel){const m=S.members.find(x=>x.id==sel),ds=m?S.deposits.filter(d=>d.mid==sel).sort((a,b)=>a.month<b.month?1:-1):[];
-   h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2><div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><span><b>${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄 ইনভয়েস</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
+   h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2>${admin&&m?`<div class="mu">✍️ সদস্যের স্বাক্ষর (ইনভয়েসে বসবে)</div>${SIGS[m.uid||m.id]?`<img src="${e(SIGS[m.uid||m.id])}" style="max-width:200px;background:#fff;border-radius:8px;display:block;margin:6px 0">`:'<div class="mu">এখনো দেওয়া হয়নি</div>'}<div class="f"><button id="sgb">✍️ স্বাক্ষর যোগ/বদলান</button><input id="sgm" data-k="${e(m.uid||m.id)}" type="file" accept="image/*" hidden>${SIGS[m.uid||m.id]?`<button class="x" data-rs="${e(m.uid||m.id)}">মুছুন</button>`:''}</div>`:''}<div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><span><b>${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄 ইনভয়েস</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
   else{const pend=USERS.filter(u=>!u.approved&&!ADMINS.includes(u.email));
    if(admin&&pend.length)h+=`<div class="card"><b>🕓 অনুমোদনের অপেক্ষায়</b>${pend.map(u=>`<div class="row"><span>${e(u.name)} <span class="mu">${e(u.phone||'')}</span></span><button class="p" data-ap="${u.id}">অনুমোদন</button></div>`).join('')}</div>`;
    h+=`<div class="card"><b>👥 সদস্য তালিকা</b>${S.members.map(m=>`<div class="row"><div class="l">${ic('🙂','#a78bfa','#6d3df0')}<span class="lk" data-s="${m.id}">${e(m.name)}</span></div><span><b>${bn(sum(S.deposits.filter(d=>d.mid==m.id)))}</b>${admin?`<button class="x" data-dm="${m.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">কোনো সদস্য নেই</p>'}`;
-   if(admin)h+=`<div class="f"><input id="nm" placeholder="সদস্যের নাম"><select id="nu"><option value="">অনুমোদিত অ্যাকাউন্টের সাথে যুক্ত করুন</option>${USERS.filter(u=>u.approved).map(u=>`<option value="${e(u.id)}">${e(u.name)} ${e(u.phone||'')}</option>`).join('')}</select><button class="p" id="am">যোগ করুন</button></div>`;
+   if(admin)h+=`<div class="f"><input id="nm" placeholder="সদস্যের নাম"><select id="nu"><option value="">অনুমোদিত অ্যাকাউন্টের সাথে যুক্ত করুন</option>${USERS.filter(u=>u.approved||ADMINS.map(a=>a.toLowerCase()).includes((u.email||'').toLowerCase())).map(u=>`<option value="${e(u.id)}">${e(u.name)} ${e(u.phone||'')}</option>`).join('')}</select><button class="p" id="am">যোগ করুন</button></div>`;
    h+='</div>'}}
  if(tab=='mon'){h+=`<div class="sw"><button data-u="d" class="${sub=='d'?'on':''}">📥 জমা</button><button data-u="x" class="${sub=='x'?'on':''}">📤 খরচ</button></div><div class="card">`;
   if(sub=='d'){h+=S.deposits.slice().sort((a,b)=>a.month<b.month?1:-1).map(d=>`<div class="row"><span>${e(mn(d.mid))} <span class="mu">${e(d.month)}</span></span><span><b style="color:var(--gr)">${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄</button>`:''}${admin?`<button class="x" data-dd="${d.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>';
@@ -166,8 +166,11 @@ function render(){if(!ok)return;let h='';
  if(tab=='more')h+=page();
  $('app').innerHTML=h;
  $('tabs').innerHTML=[['home','🏠','হোম'],['mem','👥','সদস্য'],['mon','💰','হিসাব'],['chat','💬','চ্যাট'],['more','☰','আরও'+(unread()?' •':'')]].map(t=>`<button data-t="${t[0]}" class="${tab==t[0]?'on':''}"><span>${t[1]}</span>${t[2]}</button>`).join('')}
+function shrinkSig(f,cb){const im=new Image();im.onload=()=>{const k=Math.min(1,420/im.width),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.85))};im.src=URL.createObjectURL(f)}
 function shrink(f,px,q,cb){const im=new Image();im.onload=()=>{const k=Math.min(1,px/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q))};im.src=URL.createObjectURL(f)}
 document.addEventListener('change',ev=>{const t=ev.target;
+ if(t.id=='sga'&&t.files[0])shrinkSig(t.files[0],u=>setDoc(doc(db,'app','sig_auth'),{img:u}).then(()=>{SIGA=u;alert('স্বাক্ষর সেভ হয়েছে');render()}).catch(()=>alert('সেভ হয়নি')));
+ if(t.id=='sgm'&&t.files[0]){const k=t.dataset.k;shrinkSig(t.files[0],u=>setDoc(doc(db,'sigs',k),{img:u}).then(()=>{SIGS[k]=u;alert('সদস্যের স্বাক্ষর সেভ হয়েছে');render()}).catch(()=>alert('সেভ হয়নি')))}
  if(t.id=='mon'){mon=t.value;render()}
  if(t.id=='cf'&&t.files[0])shrink(t.files[0],800,.6,u=>addDoc(collection(db,'chat'),{uid:user.uid,name:nm(),t:'image',url:u,ts:Date.now()}));
  if(t.id=='bl'&&t.files[0])shrink(t.files[0],160,.8,u=>{B.logo=u;alert('লোগো ঠিক আছে, এখন সেভ চাপুন')})});
@@ -203,6 +206,10 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  if(t.id=='ps'){POL=v('pt');await setDoc(doc(db,'app','policy'),{text:POL});S.log=[{t:Date.now(),by:nm(),m:'নীতিমালা বদলানো'},...S.log];setDoc(doc(db,'app','fin'),S);alert('সেভ হয়েছে')}
  if(t.id=='np'){const ti=v('nt').trim(),tx=v('nx').trim();if(ti&&tx){NT=[{id:rid(),t:Date.now(),by:nm(),title:ti,text:tx},...NT].slice(0,100);await setDoc(doc(db,'app','notices'),{list:NT});saveFin('নোটিফিকেশন: '+ti)}}
  if(d.dn&&confirm('মুছবেন?')){NT=NT.filter(x=>x.id!=d.dn);await setDoc(doc(db,'app','notices'),{list:NT});render()}
+ if(t.id=='sga2')$('sga').click();
+ if(t.id=='sgb')$('sgm').click();
+ if(t.id=='sgax'){await setDoc(doc(db,'app','sig_auth'),{img:''});SIGA='';render()}
+ if(d.rs){await setDoc(doc(db,'sigs',d.rs),{img:''});SIGS[d.rs]='';render()}
  if(t.id=='bl2')$('bl').click();
  if(t.id=='bs'){B.name=v('bn')||B.name;B.tag=v('bt');await setDoc(doc(db,'app','brand'),B);alert('সেভ হয়েছে')}});
 gate();
