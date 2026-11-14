@@ -51,7 +51,7 @@ const firebaseConfig = {
 const ADMINS = ["mdarshadulislam7156@gmail.com","hafezalauddin99@gmail.com","kuwaitap32@gmail.com"];
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],SIGS={},SIGA='',
+let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],SIGS={},SIGA='',ready=false,
  user=null,prof=null,admin=false,ok=false,tab='home',sub='d',sel=null,pg=null,mode='in',err='',unsubs=[],mon=new Date().toISOString().slice(0,7);
 const $=i=>document.getElementById(i),e=s=>{const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML},
 bn=n=>'৳'+Number(n||0).toLocaleString('bn-BD'),rid=()=>Math.random().toString(36).slice(2,9),sum=a=>a.reduce((t,x)=>t+Number(x.amount||0),0),
@@ -61,9 +61,9 @@ const th=()=>{try{return localStorage.getItem('theme')||'auto'}catch(x){return '
 
 applyTh();onSnapshot(doc(db,'app','brand'),s=>{if(s.exists())B=s.data();if(!ok)gate();else render()},()=>{});
 onAuthStateChanged(auth,u=>{unsubs.forEach(f=>f());unsubs=[];user=u;prof=null;ok=false;admin=false;
- if(!u){showGate();return}
+ if(!u){ready=true;showGate();return}
  admin=ADMINS.map(x=>x.toLowerCase()).includes((u.email||'').toLowerCase());
- unsubs.push(onSnapshot(doc(db,'users',u.uid),s=>{prof=s.exists()?s.data():null;const was=ok;ok=admin||!!(prof&&prof.approved);if(ok&&!was)boot();else if(ok)render();else showGate()},()=>showGate()))});
+ unsubs.push(onSnapshot(doc(db,'users',u.uid),s=>{ready=true;prof=s.exists()?s.data():null;const was=ok;ok=admin||!!(prof&&prof.approved);if(ok&&!was)boot();else if(ok)render();else showGate()},()=>{ready=true;showGate()}))});
 function boot(){const r=s=>s.data();
  unsubs.push(onSnapshot(doc(db,'app','fin'),s=>{if(s.exists()){const d=r(s);S={members:d.members||[],deposits:d.deposits||[],expenses:d.expenses||[],log:d.log||[]}}render()}),
  onSnapshot(doc(db,'app','policy'),s=>{POL=s.exists()?r(s).text||'':'';if(!(tab=='more'&&pg=='pol'&&admin))render()}),
@@ -75,6 +75,7 @@ function boot(){const r=s=>s.data();
  $('gate').hidden=true;$('app').hidden=false;$('tabs').hidden=false;render()}
 function showGate(){$('app').hidden=true;$('tabs').hidden=true;$('gate').hidden=false;gate()}
 function gate(){let h=`<div class="lg">${B.logo?`<img src="${e(B.logo)}" alt="">`:'💰'}</div><h1>${e(B.name)}</h1><p style="opacity:.8">${e(B.tag)}</p>`;
+ if(!ready){$('gate').innerHTML=h+'<p>⏳ লোড হচ্ছে, একটু অপেক্ষা করুন...</p>';return}
  if(err)h+=`<p style="background:#fff3;padding:6px 12px;border-radius:10px">${e(err)}</p>`;
  if(user&&!ok){h+=`<p>${prof?'আপনার নিবন্ধন সফল। অ্যাডমিন অনুমোদন দিলে প্রবেশ করতে পারবেন।':'প্রোফাইল তৈরি করুন'}</p>`;
   if(!prof)h+=`<input id="rn" placeholder="আপনার নাম"><input id="rp" placeholder="মোবাইল নম্বর"><button class="p" id="mk">প্রোফাইল তৈরি</button>`;
