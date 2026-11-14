@@ -49,13 +49,13 @@ const firebaseConfig = {
 const ADMINS = ["hafezalauddin39@gmail.com","hafezalauddin99@gmail.com","kuwaitap32@gmail.com"];
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],
+let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],
  user=null,prof=null,admin=false,ok=false,tab='home',sub='d',sel=null,pg=null,mode='in',err='',unsubs=[],mon=new Date().toISOString().slice(0,7);
 const $=i=>document.getElementById(i),e=s=>{const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML},
 bn=n=>'৳'+Number(n||0).toLocaleString('bn-BD'),rid=()=>Math.random().toString(36).slice(2,9),sum=a=>a.reduce((t,x)=>t+Number(x.amount||0),0),
 ic=(s,a,b)=>`<div class="ic" style="background:linear-gradient(135deg,${a},${b})">${s}</div>`,
 mn=i=>(S.members.find(x=>x.id==i)||{name:'?'}).name,nm=()=>prof?prof.name:'অ্যাডমিন',v=i=>$(i)&&$(i).value;
-const saveFin=m=>{if(m)S.log=[{t:Date.now(),by:nm(),m},...S.log].slice(0,150);setDoc(doc(db,'app','fin'),S).catch(()=>alert('সেভ হয়নি'));render()};
+const seen=()=>{try{return +localStorage.getItem('ntseen')||0}catch(x){return 0}},unread=()=>NT.filter(n=>n.t>seen()).length,saveFin=m=>{if(m)S.log=[{t:Date.now(),by:nm(),m},...S.log].slice(0,150);setDoc(doc(db,'app','fin'),S).catch(()=>alert('সেভ হয়নি'));render()};
 
 onSnapshot(doc(db,'app','brand'),s=>{if(s.exists())B=s.data();if(!ok)gate();else render()},()=>{});
 onAuthStateChanged(auth,u=>{unsubs.forEach(f=>f());unsubs=[];user=u;prof=null;ok=false;admin=false;
@@ -65,6 +65,7 @@ onAuthStateChanged(auth,u=>{unsubs.forEach(f=>f());unsubs=[];user=u;prof=null;ok
 function boot(){const r=s=>s.data();
  unsubs.push(onSnapshot(doc(db,'app','fin'),s=>{if(s.exists()){const d=r(s);S={members:d.members||[],deposits:d.deposits||[],expenses:d.expenses||[],log:d.log||[]}}render()}),
  onSnapshot(doc(db,'app','policy'),s=>{POL=s.exists()?r(s).text||'':'';if(!(tab=='more'&&pg=='pol'&&admin))render()}),
+ onSnapshot(doc(db,'app','notices'),s=>{NT=s.exists()?(s.data().list||[]):[];render()}),
  onSnapshot(query(collection(db,'chat'),orderBy('ts','desc'),limit(80)),s=>{CH=s.docs.map(r);if(tab=='chat'&&document.activeElement.id!='ct')render()}));
  if(admin)unsubs.push(onSnapshot(collection(db,'users'),s=>{USERS=s.docs.map(d=>({id:d.id,...d.data()}));render()}));
  $('gate').hidden=true;$('app').hidden=false;$('tabs').hidden=false;render()}
@@ -87,10 +88,12 @@ function menu(){const mine=S.members.find(m=>m.uid==(user&&user.uid)),
  <div class="hero"><b style="font-size:18px">${e(nm())}</b><div class="mu">${e(ph)}</div><span class="pill" style="background:#10b981">${admin?'অ্যাডমিন':'সক্রিয় সদস্য'}</span></div>`;
  h+=sec('মূল')+`<div class="card">${it('🏠','#8b5cf6','#6d3df0','হোম','tab:home')}${it('👥','#38bdf8','#2563eb','সদস্য তালিকা','tab:mem')}${it('🙂','#f472b6','#db2777','আমার প্রোফাইল',mine?'me:'+mine.id:'tab:mem')}</div>`;
  h+=sec('জমা ও খরচ')+`<div class="card">${it('📥','#10b981','#059669','মাসিক জমা','tab:mon:d')}${it('📤','#fb7185','#e11d48','খরচ','tab:mon:x')}${it('⏰','#f59e0b','#ea580c','বকেয়া তালিকা','tab:home')}${it('📊','#06b6d4','#0284c7','রিপোর্ট ডাউনলোড','pg:rep')}</div>`;
- h+=sec('সংগঠন')+`<div class="card">${it('💬','#22c55e','#15803d','গ্রুপ চ্যাট','tab:chat')}${it('📜','#f59e0b','#d97706','সংগঠনের নীতিমালা','pg:pol')}${it('🧾','#ec4899','#be185d','পরিবর্তনের লগ','pg:log')}</div>`;
+ h+=sec('সংগঠন')+`<div class="card">${it('🔔','#f59e0b','#ea580c','নোটিফিকেশন'+(unread()?` <span class="pill">${unread()} নতুন</span>`:''),'pg:not')}${it('💬','#22c55e','#15803d','গ্রুপ চ্যাট','tab:chat')}${it('📜','#f59e0b','#d97706','সংগঠনের নীতিমালা','pg:pol')}${it('🧾','#ec4899','#be185d','পরিবর্তনের লগ','pg:log')}</div>`;
  if(admin)h+=sec('অ্যাডমিন')+`<div class="card">${it('⚙️','#64748b','#334155','নাম ও লোগো সেটিংস','pg:set')}</div>`;
  return h+`<div class="card">${it('🚪','#f87171','#b91c1c','লগআউট','out')}</div>`}
 function page(){const b='<button id="mback">← মেনু</button>';
+ if(pg=='not'){try{localStorage.setItem('ntseen',Date.now())}catch(x){}
+  return b+`<div class="card"><div class="l">${ic('🔔','#f59e0b','#ea580c')}<b>নোটিফিকেশন</b></div>`+(NT.map(n=>`<div class="row" style="align-items:flex-start"><div><b>${e(n.title)}</b><div style="white-space:pre-wrap">${e(n.text)}</div><div class="mu">${e(n.by)} · ${new Date(n.t).toLocaleString('bn-BD')}</div></div>${admin?`<button class="x" data-dn="${n.id}">✕</button>`:''}</div>`).join('')||'<p class="mu">কোনো নোটিফিকেশন নেই</p>')+(admin?`<div class="f"><input id="nt" placeholder="শিরোনাম"><textarea id="nx" style="min-height:90px" placeholder="সবাইকে কী জানাতে চান..."></textarea><button class="p" id="np">নোটিফিকেশন পাঠান</button></div>`:'')+'</div>'}
  if(pg=='pol')return b+`<div class="card"><div class="l">${ic('📜','#f59e0b','#d97706')}<b>সংগঠনের নীতিমালা</b></div>`+(admin?`<textarea id="pt">${e(POL)}</textarea><div class="f"><button class="p" id="ps">সেভ করুন</button></div>`:`<pre>${e(POL)||'এখনো নীতিমালা দেওয়া হয়নি'}</pre>`)+'</div>';
  if(pg=='rep')return b+`<div class="card"><div class="l">${ic('📊','#06b6d4','#0284c7')}<b>রিপোর্ট</b></div><p>জমা ${bn(sum(S.deposits))} · খরচ ${bn(sum(S.expenses))}</p><button class="p" id="csv">CSV ডাউনলোড</button></div>`;
  if(pg=='log')return b+`<div class="card"><div class="l">${ic('🧾','#ec4899','#be185d')}<b>পরিবর্তনের লগ</b></div>`+(S.log.slice(0,50).map(x=>`<div class="row"><span>${e(x.m)}<br><span class="mu">${e(x.by)} · ${new Date(x.t).toLocaleString('bn-BD')}</span></span></div>`).join('')||'<p class="mu">কোনো লগ নেই</p>')+'</div>';
@@ -101,9 +104,9 @@ function render(){if(!ok)return;let h='';
   h+=`<div class="hero"><div class="mu">সংগঠনের মোট ব্যালেন্স</div><div class="big">${bn(tin-tout)}</div><div class="mu">${e(B.name)}</div></div>
   <div class="g2"><div class="card">${ic('📥','#10b981','#059669')}<div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(tin)}</div></div>
   <div class="card">${ic('📤','#fb7185','#e11d48')}<div class="mu">মোট খরচ</div><div class="n" style="color:var(--rd)">${bn(tout)}</div></div>
-  <div class="card">${ic('👥','#38bdf8','#2563eb')}<div class="mu">সদস্য</div><div class="n">${S.members.length} জন</div></div>
+  <div class="card">${ic('👥','#38bdf8','#2563eb')}<div class="mu">সদস্য</div><div class="n">${S.members.length.toLocaleString('bn-BD')} জন</div></div>
   <div class="card">${ic('👤','#f59e0b','#ea580c')}<div class="mu">আমার জমা</div><div class="n">${mine?bn(sum(S.deposits.filter(d=>d.mid==mine.id))):'—'}</div></div></div>
-  <div class="card"><div class="row"><b>⏰ বকেয়া</b><input type="month" id="mon" value="${mon}"></div>${due.length?due.map(m=>`<div class="row"><span>${e(m.name)}</span><span class="pill">বাকি</span></div>`).join(''):'<p class="mu">এই মাসে কারও বকেয়া নেই 🎉</p>'}</div>`}
+  ${NT[0]?`<div class="card" data-go="pg:not" style="cursor:pointer"><div class="l">${ic('🔔','#f59e0b','#ea580c')}<div><b>${e(NT[0].title)}</b><div class="mu">${e(NT[0].text.slice(0,80))}${NT[0].text.length>80?'…':''}</div></div></div></div>`:''}<div class="card"><div class="row"><b>⏰ বকেয়া</b><input type="month" id="mon" value="${mon}"></div>${due.length?due.map(m=>`<div class="row"><span>${e(m.name)}</span><span class="pill">বাকি</span></div>`).join(''):'<p class="mu">এই মাসে কারও বকেয়া নেই 🎉</p>'}</div>`}
  if(tab=='mem'){
   if(sel){const m=S.members.find(x=>x.id==sel),ds=m?S.deposits.filter(d=>d.mid==sel).sort((a,b)=>a.month<b.month?1:-1):[];
    h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2><div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><b>${bn(d.amount)}</b></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
@@ -122,7 +125,7 @@ function render(){if(!ok)return;let h='';
   <div class="f"><input id="ct" placeholder="বার্তা লিখুন..." style="flex:3"><button class="p" id="cs">পাঠান</button><button id="cf2">📷</button><input id="cf" type="file" accept="image/*" hidden></div>`}
  if(tab=='more')h+=page();
  $('app').innerHTML=h;
- $('tabs').innerHTML=[['home','🏠','হোম'],['mem','👥','সদস্য'],['mon','💰','হিসাব'],['chat','💬','চ্যাট'],['more','☰','আরও']].map(t=>`<button data-t="${t[0]}" class="${tab==t[0]?'on':''}"><span>${t[1]}</span>${t[2]}</button>`).join('')}
+ $('tabs').innerHTML=[['home','🏠','হোম'],['mem','👥','সদস্য'],['mon','💰','হিসাব'],['chat','💬','চ্যাট'],['more','☰','আরও'+(unread()?' •':'')]].map(t=>`<button data-t="${t[0]}" class="${tab==t[0]?'on':''}"><span>${t[1]}</span>${t[2]}</button>`).join('')}
 function shrink(f,px,q,cb){const im=new Image();im.onload=()=>{const k=Math.min(1,px/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',q))};im.src=URL.createObjectURL(f)}
 document.addEventListener('change',ev=>{const t=ev.target;
  if(t.id=='mon'){mon=t.value;render()}
@@ -156,6 +159,8 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  if(d.dd&&confirm('মুছবেন?')){S.deposits=S.deposits.filter(x=>x.id!=d.dd);saveFin('জমা মোছা')}
  if(d.de&&confirm('মুছবেন?')){S.expenses=S.expenses.filter(x=>x.id!=d.de);saveFin('খরচ মোছা')}
  if(t.id=='ps'){POL=v('pt');await setDoc(doc(db,'app','policy'),{text:POL});S.log=[{t:Date.now(),by:nm(),m:'নীতিমালা বদলানো'},...S.log];setDoc(doc(db,'app','fin'),S);alert('সেভ হয়েছে')}
+ if(t.id=='np'){const ti=v('nt').trim(),tx=v('nx').trim();if(ti&&tx){NT=[{id:rid(),t:Date.now(),by:nm(),title:ti,text:tx},...NT].slice(0,100);await setDoc(doc(db,'app','notices'),{list:NT});saveFin('নোটিফিকেশন: '+ti)}}
+ if(d.dn&&confirm('মুছবেন?')){NT=NT.filter(x=>x.id!=d.dn);await setDoc(doc(db,'app','notices'),{list:NT});render()}
  if(t.id=='bl2')$('bl').click();
  if(t.id=='bs'){B.name=v('bn')||B.name;B.tag=v('bt');await setDoc(doc(db,'app','brand'),B);alert('সেভ হয়েছে')}});
 gate();
