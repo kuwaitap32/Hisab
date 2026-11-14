@@ -83,6 +83,43 @@ function gate(){let h=`<div class="lg">${B.logo?`<img src="${e(B.logo)}" alt="">
  $('gate').innerHTML=h}
 const msgs={'auth/invalid-credential':'ইমেইল বা পাসওয়ার্ড ভুল','auth/email-already-in-use':'এই ইমেইলে আগেই নিবন্ধন হয়েছে','auth/weak-password':'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর দিন','auth/invalid-email':'ইমেইল ঠিক নয়'};
 const fail=x=>{err=msgs[x.code]||'কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন';gate()};
+const loadJs=u=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${u}"]`))return res();const sc=document.createElement('script');sc.src=u;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)});
+const canInv=d=>{const m=S.members.find(x=>x.id==d.mid);return !!(admin||(m&&m.uid&&user&&m.uid==user.uid))};
+function invHTML(o){const td='padding:10px 12px;border:1px solid #cfd6e6;',th=td+'background:#e8edf8;font-weight:700;text-align:left';
+ return `<div style="height:1123px;display:flex;flex-direction:column;box-sizing:border-box">
+ <div style="background:linear-gradient(135deg,#0f766e,#1e3a8a 60%,#4c1d95);color:#fff;padding:26px 36px;display:flex;align-items:center;gap:18px">
+  <div style="width:86px;height:86px;border-radius:22px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden">${o.logo?`<img src="${e(o.logo)}" style="width:100%;height:100%;object-fit:cover">`:'💰'}</div>
+  <div style="flex:1"><div style="font-size:30px;font-weight:800">${e(o.org)}</div><div style="opacity:.85;font-size:15px">${e(o.tag)}</div></div>
+  <div style="background:#fff;color:#1e3a8a;padding:8px 16px;border-radius:99px;font-weight:700;font-size:15px">${e(o.invno)}</div></div>
+ <div style="padding:30px 36px;flex:1">
+  <div style="text-align:center;font-size:28px;font-weight:800;margin-bottom:24px;color:#1e3a8a">ইনভয়েস (মাসিক জমা)</div>
+  <div style="display:flex;gap:30px;font-size:16px;line-height:2">
+   <div style="flex:1"><b style="color:#475569">বিবরণ</b><div>তারিখ: ${e(o.date)}</div><div>সংগঠন: ${e(o.org)}</div><div>সদস্য নম্বর: ${e(o.no)}</div><div>জমার মাস: ${e(o.month)}</div></div>
+   <div style="flex:1"><b style="color:#475569">সদস্যের তথ্য</b><div>নাম: ${e(o.name)}</div><div>মোবাইল: ${e(o.phone||'—')}</div></div></div>
+  <table style="width:100%;border-collapse:collapse;margin-top:26px;font-size:16px">
+   <tr><td style="${th}">মাস</td><td style="${th}">ইনভয়েস নং</td><td style="${th}">মাধ্যম</td><td style="${th};text-align:right">টাকা</td></tr>
+   <tr><td style="${td}">${e(o.month)}</td><td style="${td}">${e(o.invno)}</td><td style="${td}">${e(o.method||'—')}</td><td style="${td};text-align:right">${bn(o.amount)}</td></tr>
+   <tr><td style="${td}" colspan="3"><b style="float:right">মোট</b></td><td style="${td};text-align:right;font-weight:800">${bn(o.amount)}</td></tr></table>
+  <div style="margin-top:22px;padding:12px 16px;background:#f1f5f9;border-radius:10px;font-size:15px">এ পর্যন্ত আপনার মোট জমা: <b>${bn(o.total)}</b></div>
+  <div style="display:flex;justify-content:space-between;margin-top:150px;font-size:15px">
+   <div style="border-top:1.5px solid #333;padding-top:6px;width:230px;text-align:center">সদস্যের স্বাক্ষর</div>
+   <div style="border-top:1.5px solid #333;padding-top:6px;width:230px;text-align:center">কর্তৃপক্ষের স্বাক্ষর</div></div></div>
+ <div style="padding:14px 36px;background:#f1f5f9;color:#64748b;font-size:13px;text-align:center">এটি ${e(o.org)}-এর হিসাব অ্যাপ থেকে তৈরি কম্পিউটার-জেনারেটেড ইনভয়েস</div></div>`}
+async function dlInvoice(did,btn){
+ const d=S.deposits.find(x=>x.id==did);if(!d)return;const mi=S.members.findIndex(x=>x.id==d.mid),m=S.members[mi];if(!m||!canInv(d))return;
+ const old=btn.textContent;btn.textContent='⏳ তৈরি হচ্ছে...';btn.disabled=true;
+ try{
+  await loadJs('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  await loadJs('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const u=(m.uid&&user&&m.uid==user.uid)?prof:USERS.find(x=>x.id==m.uid),no=String(mi+1).padStart(3,'0'),invno='INV-'+d.month.replace('-','')+'-'+no;
+  const box=document.createElement('div');box.style.cssText='position:fixed;left:-10000px;top:0;width:794px;background:#fff;color:#111;font-family:"Noto Sans Bengali",system-ui,sans-serif';
+  box.innerHTML=invHTML({logo:B.logo,org:B.name,tag:B.tag,invno,no,name:m.name,phone:u&&u.phone,month:d.month,method:d.method,amount:d.amount,total:sum(S.deposits.filter(x=>x.mid==m.id)),date:new Date().toLocaleDateString('bn-BD',{year:'numeric',month:'long',day:'numeric'})});
+  document.body.appendChild(box);
+  const cv=await html2canvas(box,{scale:2,backgroundColor:'#ffffff'});document.body.removeChild(box);
+  const pdf=new window.jspdf.jsPDF('p','pt','a4');pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());
+  pdf.save(invno+'.pdf');
+ }catch(x){alert('ইনভয়েস তৈরি হয়নি, ইন্টারনেট দেখে আবার চেষ্টা করুন')}
+ btn.textContent=old;btn.disabled=false}
 function menu(){const mine=S.members.find(m=>m.uid==(user&&user.uid)),
  it=(i,a,b,t,go)=>`<div class="row" data-go="${go}" style="cursor:pointer"><div class="l">${ic(i,a,b)}<b>${t}</b></div><span class="mu">›</span></div>`,
  sec=t=>`<div class="mu" style="margin:16px 4px 0">${t}</div>`,ph=prof&&prof.phone?prof.phone.slice(0,3)+'•••••'+prof.phone.slice(-3):'';
@@ -112,15 +149,15 @@ function render(){if(!ok)return;let h='';
   ${NT[0]?`<div class="card" data-go="pg:not" style="cursor:pointer"><div class="l">${ic('🔔','#f59e0b','#ea580c')}<div><b>${e(NT[0].title)}</b><div class="mu">${e(NT[0].text.slice(0,80))}${NT[0].text.length>80?'…':''}</div></div></div></div>`:''}<div class="card"><div class="row"><b>⏰ বকেয়া</b><input type="month" id="mon" value="${mon}"></div>${due.length?due.map(m=>`<div class="row"><span>${e(m.name)}</span><span class="pill">বাকি</span></div>`).join(''):'<p class="mu">এই মাসে কারও বকেয়া নেই 🎉</p>'}</div>`}
  if(tab=='mem'){
   if(sel){const m=S.members.find(x=>x.id==sel),ds=m?S.deposits.filter(d=>d.mid==sel).sort((a,b)=>a.month<b.month?1:-1):[];
-   h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2><div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><b>${bn(d.amount)}</b></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
+   h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2><div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><span><b>${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄 ইনভয়েস</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
   else{const pend=USERS.filter(u=>!u.approved&&!ADMINS.includes(u.email));
    if(admin&&pend.length)h+=`<div class="card"><b>🕓 অনুমোদনের অপেক্ষায়</b>${pend.map(u=>`<div class="row"><span>${e(u.name)} <span class="mu">${e(u.phone||'')}</span></span><button class="p" data-ap="${u.id}">অনুমোদন</button></div>`).join('')}</div>`;
    h+=`<div class="card"><b>👥 সদস্য তালিকা</b>${S.members.map(m=>`<div class="row"><div class="l">${ic('🙂','#a78bfa','#6d3df0')}<span class="lk" data-s="${m.id}">${e(m.name)}</span></div><span><b>${bn(sum(S.deposits.filter(d=>d.mid==m.id)))}</b>${admin?`<button class="x" data-dm="${m.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">কোনো সদস্য নেই</p>'}`;
    if(admin)h+=`<div class="f"><input id="nm" placeholder="সদস্যের নাম"><select id="nu"><option value="">অনুমোদিত অ্যাকাউন্টের সাথে যুক্ত করুন</option>${USERS.filter(u=>u.approved).map(u=>`<option value="${e(u.id)}">${e(u.name)} ${e(u.phone||'')}</option>`).join('')}</select><button class="p" id="am">যোগ করুন</button></div>`;
    h+='</div>'}}
  if(tab=='mon'){h+=`<div class="sw"><button data-u="d" class="${sub=='d'?'on':''}">📥 জমা</button><button data-u="x" class="${sub=='x'?'on':''}">📤 খরচ</button></div><div class="card">`;
-  if(sub=='d'){h+=S.deposits.slice().sort((a,b)=>a.month<b.month?1:-1).map(d=>`<div class="row"><span>${e(mn(d.mid))} <span class="mu">${e(d.month)}</span></span><span><b style="color:var(--gr)">${bn(d.amount)}</b>${admin?`<button class="x" data-dd="${d.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>';
-   if(admin&&S.members.length)h+=`<div class="f"><select id="dm">${S.members.map(m=>`<option value="${m.id}">${e(m.name)}</option>`).join('')}</select><input id="dmo" type="month" value="${mon}"><input id="da" type="number" placeholder="টাকা"><button class="p" id="ad">জমা যোগ</button></div>`}
+  if(sub=='d'){h+=S.deposits.slice().sort((a,b)=>a.month<b.month?1:-1).map(d=>`<div class="row"><span>${e(mn(d.mid))} <span class="mu">${e(d.month)}</span></span><span><b style="color:var(--gr)">${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄</button>`:''}${admin?`<button class="x" data-dd="${d.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>';
+   if(admin&&S.members.length)h+=`<div class="f"><select id="dm">${S.members.map(m=>`<option value="${m.id}">${e(m.name)}</option>`).join('')}</select><input id="dmo" type="month" value="${mon}"><input id="da" type="number" placeholder="টাকা"><input id="dp" placeholder="মাধ্যম (ক্যাশ/বিকাশ/ব্যাংক)"><button class="p" id="ad">জমা যোগ</button></div>`}
   else{h+=S.expenses.slice().reverse().map(x=>`<div class="row"><span>${e(x.why)} <span class="mu">${e(x.date)}</span></span><span><b style="color:var(--rd)">${bn(x.amount)}</b>${admin?`<button class="x" data-de="${x.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">খরচ নেই</p>';
    if(admin)h+=`<div class="f"><input id="ew" placeholder="খরচের কারণ"><input id="ed" type="date"><input id="ea" type="number" placeholder="টাকা"><button class="p" id="ae">খরচ যোগ</button></div>`}
   h+='</div>'}
@@ -145,6 +182,7 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  }catch(x){return fail(x)}
  if(t.id=='out'||(g&&g.dataset.go=='out')){signOut(auth);tab='home';pg=null;return}
  if(!ok)return;
+ if(d.inv){return dlInvoice(d.inv,t)}
  if(d.th){try{localStorage.setItem('theme',d.th)}catch(x){}applyTh();return render()}
  if(tb){tab=tb.dataset.t;sel=null;pg=null;return render()}
  if(g){const a=g.dataset.go.split(':');pg=null;sel=null;if(a[0]=='tab'){tab=a[1];if(a[2])sub=a[2]}else if(a[0]=='pg'){tab='more';pg=a[1]}else if(a[0]=='me'){tab='mem';sel=a[1]}return render()}
@@ -157,7 +195,7 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  if(!admin)return;
  if(d.ap){await updateDoc(doc(db,'users',d.ap),{approved:true})}
  if(t.id=='am'){const n=v('nm').trim();if(n){S.members.push({id:rid(),name:n,uid:v('nu')||''});saveFin('সদস্য যোগ: '+n)}}
- if(t.id=='ad'){const a=+v('da'),m=v('dmo');if(a>0&&m){S.deposits.push({id:rid(),mid:v('dm'),month:m,amount:a});saveFin(`জমা: ${mn(v('dm'))} ${m} ${a}`)}}
+ if(t.id=='ad'){const a=+v('da'),m=v('dmo');if(a>0&&m){S.deposits.push({id:rid(),mid:v('dm'),month:m,amount:a,method:v('dp').trim()});saveFin(`জমা: ${mn(v('dm'))} ${m} ${a}`)}}
  if(t.id=='ae'){const a=+v('ea'),w=v('ew').trim();if(a>0&&w){S.expenses.push({id:rid(),why:w,date:v('ed'),amount:a});saveFin(`খরচ: ${w} ${a}`)}}
  if(d.dm&&confirm('সদস্য ও তার জমা মুছবেন?')){const o=mn(d.dm);S.members=S.members.filter(x=>x.id!=d.dm);S.deposits=S.deposits.filter(x=>x.mid!=d.dm);saveFin('সদস্য মোছা: '+o)}
  if(d.dd&&confirm('মুছবেন?')){S.deposits=S.deposits.filter(x=>x.id!=d.dd);saveFin('জমা মোছা')}
