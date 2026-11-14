@@ -48,7 +48,7 @@ const firebaseConfig = {
   appId: "1:178285127387:web:8acd8709ad87d2c9f94efe"
 };
 /*ADMIN_EMAILS*/
-const ADMINS = ["hafezalauddin39@gmail.com","hafezalauddin99@gmail.com","kuwaitap32@gmail.com"];
+const ADMINS = ["mdarshadulislam7156@gmail.com","hafezalauddin99@gmail.com","kuwaitap32@gmail.com"];
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 let B={name:'আমাদের সংগঠন',tag:'সঞ্চয় ও হিসাব ব্যবস্থাপনা',logo:''},S={members:[],deposits:[],expenses:[],log:[]},POL='',USERS=[],CH=[],NT=[],SIGS={},SIGA='',
@@ -86,6 +86,7 @@ function gate(){let h=`<div class="lg">${B.logo?`<img src="${e(B.logo)}" alt="">
 const msgs={'auth/invalid-credential':'ইমেইল বা পাসওয়ার্ড ভুল','auth/email-already-in-use':'এই ইমেইলে আগেই নিবন্ধন হয়েছে','auth/weak-password':'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর দিন','auth/invalid-email':'ইমেইল ঠিক নয়'};
 const fail=x=>{err=msgs[x.code]||'কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন';gate()};
 const loadJs=u=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${u}"]`))return res();const sc=document.createElement('script');sc.src=u;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)});
+const av=(n,u2)=>{const pr=u2||prof,ph=pr&&pr.photo;return `<div class="ic" style="width:${n}px;height:${n}px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#6d3df0);font-size:${Math.round(n/2.2)}px;border:3px solid rgba(255,255,255,.35)">${ph?`<img src="${e(ph)}" alt="">`:e(((pr&&pr.name)||'?').trim().charAt(0).toUpperCase())}</div>`};
 const canInv=d=>{const m=S.members.find(x=>x.id==d.mid);return !!(admin||(m&&m.uid&&user&&m.uid==user.uid))};
 function invHTML(o){const td='padding:10px 12px;border:1px solid #cfd6e6;',th=td+'background:#e8edf8;font-weight:700;text-align:left';
  return `<div style="height:1123px;display:flex;flex-direction:column;box-sizing:border-box">
@@ -124,14 +125,19 @@ function menu(){const mine=S.members.find(m=>m.uid==(user&&user.uid)),
  it=(i,a,b,t,go)=>`<div class="row" data-go="${go}" style="cursor:pointer"><div class="l">${ic(i,a,b)}<b>${t}</b></div><span class="mu">›</span></div>`,
  sec=t=>`<div class="mu" style="margin:16px 4px 0">${t}</div>`,ph=prof&&prof.phone?prof.phone.slice(0,3)+'•••••'+prof.phone.slice(-3):'';
  let h=`<div class="l" style="margin-bottom:12px"><div class="ic" style="width:54px;height:54px;background:linear-gradient(135deg,#6d3df0,#3b5bdb)">${B.logo?`<img src="${e(B.logo)}" alt="">`:'💰'}</div><div><b style="font-size:18px">${e(B.name)}</b><div class="mu">${e(B.tag)}</div></div></div>
- <div class="hero"><b style="font-size:18px">${e(nm())}</b><div class="mu">${e(ph)}</div><span class="pill" style="background:#10b981">${admin?'অ্যাডমিন':'সক্রিয় সদস্য'}</span></div>`;
+ <div class="hero" style="display:flex;gap:14px;align-items:center">${av(72)}<div><b style="font-size:18px">${e(nm())}</b><div class="mu">${e(ph)}</div><span class="pill" style="background:#10b981">${admin?'অ্যাডমিন':'সক্রিয় সদস্য'}</span></div></div>`;
  h+=sec('থিম')+`<div class="card"><div class="l">${ic('🎨','#a855f7','#6d28d9')}<b>থিম বাছুন</b></div><div class="sw" style="margin-top:10px">${[['dark','🌙 ডার্ক'],['light','☀️ লাইট'],['auto','🖥️ অটো']].map(x=>`<button data-th="${x[0]}" class="${th()==x[0]?'on':''}">${x[1]}</button>`).join('')}</div></div>`;
- h+=sec('মূল')+`<div class="card">${it('🏠','#8b5cf6','#6d3df0','হোম','tab:home')}${it('👥','#38bdf8','#2563eb','সদস্য তালিকা','tab:mem')}${it('🙂','#f472b6','#db2777','আমার প্রোফাইল',mine?'me:'+mine.id:'tab:mem')}</div>`;
+ h+=sec('মূল')+`<div class="card">${it('🏠','#8b5cf6','#6d3df0','হোম','tab:home')}${it('👥','#38bdf8','#2563eb','সদস্য তালিকা','tab:mem')}${it('🙂','#f472b6','#db2777','আমার প্রোফাইল','pg:me')}</div>`;
  h+=sec('জমা ও খরচ')+`<div class="card">${it('📥','#10b981','#059669','মাসিক জমা','tab:mon:d')}${it('📤','#fb7185','#e11d48','খরচ','tab:mon:x')}${it('⏰','#f59e0b','#ea580c','বকেয়া তালিকা','tab:home')}${it('📊','#06b6d4','#0284c7','রিপোর্ট ডাউনলোড','pg:rep')}</div>`;
  h+=sec('সংগঠন')+`<div class="card">${it('🔔','#f59e0b','#ea580c','নোটিফিকেশন'+(unread()?` <span class="pill">${unread()} নতুন</span>`:''),'pg:not')}${it('💬','#22c55e','#15803d','গ্রুপ চ্যাট','tab:chat')}${it('📜','#f59e0b','#d97706','সংগঠনের নীতিমালা','pg:pol')}${it('🧾','#ec4899','#be185d','পরিবর্তনের লগ','pg:log')}</div>`;
  if(admin)h+=sec('অ্যাডমিন')+`<div class="card">${it('⚙️','#64748b','#334155','নাম ও লোগো সেটিংস','pg:set')}</div>`;
  return h+`<div class="card">${it('🚪','#f87171','#b91c1c','লগআউট','out')}</div>`}
 function page(){const b='<button id="mback">← মেনু</button>';
+ if(pg=='me'){const mine=S.members.find(m=>m.uid==user.uid),ct=user.metadata&&user.metadata.creationTime?new Date(user.metadata.creationTime).toLocaleDateString('bn-BD',{year:'numeric',month:'long',day:'numeric'}):'—',
+  row=(i,k,val)=>`<div class="row"><span class="mu">${i} ${k}</span><b style="text-align:right;word-break:break-all">${e(val||'—')}</b></div>`;
+  return b+`<div class="hero" style="display:flex;gap:16px;align-items:center"><div style="position:relative">${av(88)}<button id="phb" style="position:absolute;right:-8px;bottom:-8px;border-radius:50%;width:36px;height:36px;padding:0">📷</button><input id="ph" type="file" accept="image/*" hidden></div><div><b style="font-size:20px">${e(nm())}</b><div class="mu">${e(prof&&prof.phone||'')}</div><span class="pill" style="background:#10b981">${admin?'অ্যাডমিন':'সক্রিয় সদস্য'}</span></div></div>
+  <div class="card"><b>একাউন্টের তথ্য</b><div class="mu" style="margin-top:10px">👤 পূর্ণ নাম</div><input id="mn2" value="${e(nm())}" style="width:100%;margin-top:4px"><button class="p" id="mns" style="width:100%;margin-top:10px">সেভ করুন</button><div style="margin-top:12px">${row('✉️','ইমেইল এড্রেস',user.email)}${row('📞','ফোন নম্বর',prof&&prof.phone)}${row('📅','রেজিস্ট্রেশন তারিখ',ct)}</div></div>`
+  +(mine?`<div class="card" data-go="me:${mine.id}" style="cursor:pointer"><div class="l">${ic('📥','#10b981','#059669')}<b>আমার জমার হিসাব ও ইনভয়েস</b></div></div>`:'<div class="card"><p class="mu">আপনার অ্যাকাউন্ট এখনো সদস্য তালিকার সাথে যুক্ত হয়নি। অ্যাডমিনকে জানান, তাহলে এখানে জমার হিসাব ও ইনভয়েস দেখা যাবে।</p></div>')}
  if(pg=='not'){try{localStorage.setItem('ntseen',Date.now())}catch(x){}
   return b+`<div class="card"><div class="l">${ic('🔔','#f59e0b','#ea580c')}<b>নোটিফিকেশন</b></div>`+(NT.map(n=>`<div class="row" style="align-items:flex-start"><div><b>${e(n.title)}</b><div style="white-space:pre-wrap">${e(n.text)}</div><div class="mu">${e(n.by)} · ${new Date(n.t).toLocaleString('bn-BD')}</div></div>${admin?`<button class="x" data-dn="${n.id}">✕</button>`:''}</div>`).join('')||'<p class="mu">কোনো নোটিফিকেশন নেই</p>')+(admin?`<div class="f"><input id="nt" placeholder="শিরোনাম"><textarea id="nx" style="min-height:90px" placeholder="সবাইকে কী জানাতে চান..."></textarea><button class="p" id="np">নোটিফিকেশন পাঠান</button></div>`:'')+'</div>'}
  if(pg=='pol')return b+`<div class="card"><div class="l">${ic('📜','#f59e0b','#d97706')}<b>সংগঠনের নীতিমালা</b></div>`+(admin?`<textarea id="pt">${e(POL)}</textarea><div class="f"><button class="p" id="ps">সেভ করুন</button></div>`:`<pre>${e(POL)||'এখনো নীতিমালা দেওয়া হয়নি'}</pre>`)+'</div>';
@@ -152,7 +158,7 @@ function render(){if(!ok)return;let h='';
    h+=`<div class="card"><button id="back">← ফিরুন</button><h2>${e(m&&m.name)}</h2>${admin&&m?`<div class="mu">✍️ সদস্যের স্বাক্ষর (ইনভয়েসে বসবে)</div>${SIGS[m.uid||m.id]?`<img src="${e(SIGS[m.uid||m.id])}" style="max-width:200px;background:#fff;border-radius:8px;display:block;margin:6px 0">`:'<div class="mu">এখনো দেওয়া হয়নি</div>'}<div class="f"><button id="sgb">✍️ স্বাক্ষর যোগ/বদলান</button><input id="sgm" data-k="${e(m.uid||m.id)}" type="file" accept="image/*" hidden>${SIGS[m.uid||m.id]?`<button class="x" data-rs="${e(m.uid||m.id)}">মুছুন</button>`:''}</div>`:''}<div class="mu">মোট জমা</div><div class="n" style="color:var(--gr)">${bn(sum(ds))}</div>${ds.map(d=>`<div class="row"><span>${e(d.month)}</span><span><b>${bn(d.amount)}</b> ${canInv(d)?`<button data-inv="${d.id}">📄 ইনভয়েস</button>`:''}</span></div>`).join('')||'<p class="mu">জমা নেই</p>'}</div>`}
   else{const pend=USERS.filter(u=>!u.approved&&!ADMINS.includes(u.email));
    if(admin&&pend.length)h+=`<div class="card"><b>🕓 অনুমোদনের অপেক্ষায়</b>${pend.map(u=>`<div class="row"><span>${e(u.name)} <span class="mu">${e(u.phone||'')}</span></span><button class="p" data-ap="${u.id}">অনুমোদন</button></div>`).join('')}</div>`;
-   h+=`<div class="card"><b>👥 সদস্য তালিকা</b>${S.members.map(m=>`<div class="row"><div class="l">${ic('🙂','#a78bfa','#6d3df0')}<span class="lk" data-s="${m.id}">${e(m.name)}</span></div><span><b>${bn(sum(S.deposits.filter(d=>d.mid==m.id)))}</b>${admin?`<button class="x" data-dm="${m.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">কোনো সদস্য নেই</p>'}`;
+   h+=`<div class="card"><b>👥 সদস্য তালিকা</b>${S.members.map(m=>`<div class="row"><div class="l">${av(42,(m.uid==user.uid?prof:USERS.find(x=>x.id==m.uid))||{name:m.name})}<span class="lk" data-s="${m.id}">${e(m.name)}</span></div><span><b>${bn(sum(S.deposits.filter(d=>d.mid==m.id)))}</b>${admin?`<button class="x" data-dm="${m.id}">✕</button>`:''}</span></div>`).join('')||'<p class="mu">কোনো সদস্য নেই</p>'}`;
    if(admin)h+=`<div class="f"><input id="nm" placeholder="সদস্যের নাম"><select id="nu"><option value="">অনুমোদিত অ্যাকাউন্টের সাথে যুক্ত করুন</option>${USERS.filter(u=>u.approved||ADMINS.map(a=>a.toLowerCase()).includes((u.email||'').toLowerCase())).map(u=>`<option value="${e(u.id)}">${e(u.name)} ${e(u.phone||'')}</option>`).join('')}</select><button class="p" id="am">যোগ করুন</button></div>`;
    h+='</div>'}}
  if(tab=='mon'){h+=`<div class="sw"><button data-u="d" class="${sub=='d'?'on':''}">📥 জমা</button><button data-u="x" class="${sub=='x'?'on':''}">📤 খরচ</button></div><div class="card">`;
@@ -171,6 +177,7 @@ function shrink(f,px,q,cb){const im=new Image();im.onload=()=>{const k=Math.min(
 document.addEventListener('change',ev=>{const t=ev.target;
  if(t.id=='sga'&&t.files[0])shrinkSig(t.files[0],u=>setDoc(doc(db,'app','sig_auth'),{img:u}).then(()=>{SIGA=u;alert('স্বাক্ষর সেভ হয়েছে');render()}).catch(()=>alert('সেভ হয়নি')));
  if(t.id=='sgm'&&t.files[0]){const k=t.dataset.k;shrinkSig(t.files[0],u=>setDoc(doc(db,'sigs',k),{img:u}).then(()=>{SIGS[k]=u;alert('সদস্যের স্বাক্ষর সেভ হয়েছে');render()}).catch(()=>alert('সেভ হয়নি')))}
+ if(t.id=='ph'&&t.files[0])shrink(t.files[0],240,.8,u=>updateDoc(doc(db,'users',user.uid),{photo:u}).then(()=>alert('ছবি সেভ হয়েছে')).catch(()=>alert('সেভ হয়নি')));
  if(t.id=='mon'){mon=t.value;render()}
  if(t.id=='cf'&&t.files[0])shrink(t.files[0],800,.6,u=>addDoc(collection(db,'chat'),{uid:user.uid,name:nm(),t:'image',url:u,ts:Date.now()}));
  if(t.id=='bl'&&t.files[0])shrink(t.files[0],160,.8,u=>{B.logo=u;alert('লোগো ঠিক আছে, এখন সেভ চাপুন')})});
@@ -185,6 +192,8 @@ document.addEventListener('click',async ev=>{const t=ev.target,d=t.dataset||{},g
  }catch(x){return fail(x)}
  if(t.id=='out'||(g&&g.dataset.go=='out')){signOut(auth);tab='home';pg=null;return}
  if(!ok)return;
+ if(t.id=='phb'){$('ph').click();return}
+ if(t.id=='mns'){const n=v('mn2').trim();if(n)updateDoc(doc(db,'users',user.uid),{name:n}).then(()=>alert('নাম সেভ হয়েছে')).catch(()=>alert('সেভ হয়নি'));return}
  if(d.inv){return dlInvoice(d.inv,t)}
  if(d.th){try{localStorage.setItem('theme',d.th)}catch(x){}applyTh();return render()}
  if(tb){tab=tb.dataset.t;sel=null;pg=null;return render()}
